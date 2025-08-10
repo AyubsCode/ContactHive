@@ -14,26 +14,57 @@ import java.util.Scanner
  * - Update contact details
  * - Delete contacts
  * - Save and load contacts between program runs
+ *
+ * Project status: Complete
  */
-val fileName = "contactlist.txt"
+const val fileName = "contactlist.txt"
+const val delimiter = ","
 
-fun displayMenu(){
-    println("-------------\nContact Manager\n1. Add Contact\n2. Update Contact\n" +
-            "3. Delete Contact\n4. Search Contact\n5. Display Contacts\n6. Exit\n-------------")
+/**
+ * Purpose: Display the Menu options
+ */
+fun displayMenu() {
+    println("""
+        -------------
+        Contact Manager 
+        
+        1. Add Contact
+        2. Update Contact
+        3. Delete Contact
+        4. Search Contact
+        5. Display Contacts
+        6. Exit
+        -------------
+    """.trimIndent())
+}
+
+/**
+ * Purpose: Writes contacts into file
+ */
+fun saveContacts(contacts: List<Contact>){
+   File(fileName).writeText(contacts.joinToString("\n")
+   {"${it.name}$delimiter${it.phone}$delimiter${it.email}"})
+}
+
+/**
+ * Purpose: Loads all the contacts from file
+ */
+fun loadContacts(): MutableList<Contact>{
+    val file = File(fileName)
+    if (!file.exists()) return mutableListOf()
+    return file.readLines()
+        .mapNotNull { line ->
+            val parts = line.split(delimiter)
+            if (parts.size == 3) Contact(parts[0].trim(), parts[1].trim(),
+                parts[2].trim()) else null
+        }.toMutableList()
 }
 
 fun isDuplicateContact(name: String, phone: String): Boolean {
-
-    val file = File(fileName)
-    if (!file.exists()) return false
-
-    return file.readLines().any { line ->
-        val parts = line.split("::")
-        val storedName = parts.getOrNull(0)?.trim()
-        val storedPhone = parts.getOrNull(1)?.trim()
-        storedName.equals(name,true) && storedPhone == phone
-    }
+    return loadContacts().any {
+        it.name.equals(name,true) && it.phone == phone }
 }
+
 
 /**
  * Purpose: Add a new contact to text file
@@ -44,67 +75,146 @@ fun create(){
         //get user input
         print("Enter in a name: ")
         val name = readln().trim()
-        print("Enter in a phone: ")
+        print("Enter in a phone number(e.g 123-456-7890): ")
         val phone = readln().trim()
-        print("Enter in a email: ")
+        print("Enter in an email: ")
         val email = readln().trim()
 
         if (isDuplicateContact(name, phone)) {
-            println("[!] A contact with the same name and phone already exists, please try again.")
+            println("=======\n[!] A contact with the same name and phone number already exists, please try again.\n=======")
             continue
         }
 
-        //initialize the Contact
-        val contact = Contact(name, phone, email)
-        File(fileName).appendText("$contact\n")
-        println("[+] New contact has been added.")
+        //Load the Contacts
+        val contacts = loadContacts()
+        contacts.add(Contact(name,phone,email))
+        saveContacts(contacts)
+        println("[+] New contact added.")
         break
     }
-
 }
 
 /**
- * Purpose: Find the contact name and update all contact details
+ * Purpose: Find the contact name and phone update all contact details
  */
 fun update(){
-    val name: String
+
+    val contacts = loadContacts()
+    if (contacts.isEmpty()){
+        println("=======\nYou don't have any contacts yet. Create one to see it listed here.\n=======")
+        return
+    }
+
+    print("Enter in the contact name: ")
+    val oldName = readln().trim()
+    print("Enter in the contact phone number: ")
+    val oldPhone = readln().trim()
+    val contact = contacts.find{it.name.equals(oldName,true) &&
+            it.phone == oldPhone}
+
+    if (contact == null){
+        println("=======\n[!] Contact doesn't exist\n=======")
+    }
+
+    else {
+        //Get the new contact details
+        print("New name (press Enter to keep current): ")
+        val newName = readln().trim().ifBlank { null }
+
+        print("New phone number (press Enter to keep current): ")
+        val newPhone = readln().trim().ifBlank { null }
+
+        print("New email (press Enter to keep current): ")
+        val newEmail = readln().trim().ifBlank { null }
+
+        try {
+            newName?.let { contact?.updateName(it) }
+            newEmail?.let { contact?.updateEmail(it) }
+            newPhone?.let { contact?.updatePhone(it) }
+
+            saveContacts(contacts)
+            println("[+] Contact updated successfully. ")
+        } catch (e: IllegalArgumentException) {
+            println("=======\n[!] Update failed: ${e.message}\n=======")
+        }
+    }
 
 }
 
 /**
  * Purpose: Find the contact name and remove it from text file
  */
-fun delete(){
-    val name: String
+fun delete() {
+
+    val contacts = loadContacts()
+
+    print("Enter in the name to remove: ")
+    val oldName = readln().trim()
+    print("Enter in the phone number to remove: ")
+    val oldPhone = readln().trim()
+
+
+    val newContacts = contacts.filterNot { it.name.equals(oldName, true) && it.phone == oldPhone }
+
+    if (newContacts.size == contacts.size) {
+        println("=======\n[!] Contact not found.\n=======")
+    } else {
+        saveContacts(newContacts)
+        println("[+] Contact deleted.")
+    }
+
 }
 
 /**
  * Purpose: Display the contents from text file
  */
 fun display(){
-    val file = File(fileName)
-    if (!file.exists() || file.readLines().isEmpty()){
+
+    val contacts = loadContacts()
+    if (loadContacts().isEmpty()){
         println("=======\nYou don't have any contacts yet. Create one to see it listed here.\n=======")
         return
     }
     println("\n Your Contacts: \n===========")
-    file.readLines().forEachIndexed {index , line ->
-        val parts = line.split(",")
-    if (parts.size == 3) println("${index+1}. ${parts[0]}")}
+    contacts.sortedBy {it.name}.forEachIndexed { index, contact ->
+        println("${index+1}. ${contact.name.lowercase()}")
+    }
 }
 
 /**
  * Purpose: Find the contact name and display all contact details
  */
 fun search(){
-    val name: String
-    val phone: String
-    val email: String
+
+    print("Enter in the name to search: ")
+    val searchName = readln().trim()
+    print("Enter in the phone number to search: ")
+    val searchPhone = readln().trim()
+
+    //If either or both are empty, no point on continuing
+    if(searchPhone.isBlank() || searchName.isBlank()){
+        println("-----\n[!] Input have been left blank, exiting.\n------")
+    }
+
+    else {
+        val found = loadContacts().filter { it.name.contains(searchName, true) && it.phone.contains(searchPhone, true) }
+
+        if (found.isNotEmpty()) {
+            println("Match found: ")
+            found.forEach {
+                println("============\nName: ${it.name}\nPhone Number: ${it.phone}\nEmail: ${it.email}\n============")
+            }
+        }
+        else{
+            println("-----\n[!] No contact was found with name and phone number provided.\n------")
+        }
+    }
+
 }
 
 
 fun main(){
-    var scanner = Scanner(System.`in`)
+    val scanner = Scanner(System.`in`)
     var running = true
 
     while (running){
