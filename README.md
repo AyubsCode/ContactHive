@@ -12,4 +12,5 @@ The app ensures contacts are saved and loaded between sessions, making it a reli
 3. Search for contacts by name  
 4. Update contact details  
 5. Delete contacts  
-6. Save contacts to a file and load them when the program starts, preserving data between runs  
+
+**Note:** Contacts are saved to a file and load up when the program starts, preserving data between runs.  
