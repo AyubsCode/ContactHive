@@ -15,7 +15,7 @@ import java.util.Scanner
  * - Delete contacts
  * - Save and load contacts between program runs
  *
- * Project status: Complete
+ * Project Status: Complete
  */
 const val fileName = "contactlist.txt"
 const val delimiter = ","
