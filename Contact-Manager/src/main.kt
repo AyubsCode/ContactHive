@@ -171,7 +171,7 @@ fun delete() {
 fun display(){
 
     val contacts = loadContacts()
-    if (loadContacts().isEmpty()){
+    if (contacts.isEmpty()){
         println("=======\nYou don't have any contacts yet. Create one to see it listed here.\n=======")
         return
     }
